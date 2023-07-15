@@ -1,0 +1,29 @@
+{
+    "name": "kemetech/shopping-cart",
+    "description": "shopping cart package for laravel",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Kemetech\\Cart\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Moataz Elsayed",
+            "email": "dr.moatazelsayed@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Kemetech\\Cart\\ShoppingCartServiceProvider"
+            ],
+            "aliases": {
+                "Cart": "Kemetech\\Cart\\Facades\\CartFacade"
+            }
+        }
+    },
+    "minimum-stability": "stable",
+    "require": {}
+}
