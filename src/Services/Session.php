@@ -16,6 +16,8 @@ class Session
 
     protected $name = 'cart.session';
 
+    protected $saved = 'cart.saved';
+
     protected $model;
 
     public function __construct(SessionManager $session, Dispatcher $event)
@@ -101,7 +103,7 @@ class Session
         return md5($id.serialize($attributes));
     }
 
-     /**
+    /**
      *  Add an Item to Shopping Cart
      *
      * @param $id
@@ -125,7 +127,7 @@ class Session
         return $row;
     }
 
-     /**
+    /**
      *  Add a row in Shopping Cart if exist then update it
      *
      * @param $id
@@ -185,16 +187,15 @@ class Session
      */
     public function remove($rawId)
     {
+        $cart = $this->getCart();
+
         if (!$row = $this->get($rawId))
         {
             return true;
         }
 
-        $cart = $this->getCart();
-
         $this->event->push('cart.removing', [$row, $cart]);
         $cart->forget($rawId);
-
         $this->event->push('cart.removed', [$row, $cart]);
 
         $this->save($cart);
@@ -360,7 +361,7 @@ class Session
         $this->destroy();
     }
 
-     /**
+    /**
      *  Return Total of Shopping Cart
      *
      * @return int
@@ -370,7 +371,7 @@ class Session
         return $this->totalPrice();
     }
 
-     /**
+    /**
      *  Calculate totals for all Items in Shopping Cart
      *
      * @return int
@@ -404,7 +405,7 @@ class Session
         return $this->count() <= 0;
     }
 
-        /**
+    /**
      *  Returns the quantity of all items
      *
      * @param bool $totalItems
@@ -428,7 +429,7 @@ class Session
         return $count;
     }
 
-        /**
+    /**
      *   Return the number of rows
      *
      * @return int
@@ -438,7 +439,7 @@ class Session
         return $this->count(false);
     }
 
-        /**
+    /**
      *  Search items by property
      *
      * @param array $search
@@ -451,16 +452,92 @@ class Session
         {
             return $rows;
         }
-
         foreach ($this->getCart() as $item)
         {
-            if (array_intersect_assoc($item->intersect($search)->toArray(), $search))
+            if ($item->intersect($search)->intersectAssoc($search))
             {
                 $rows->put($item->__raw_id, $item);
             }
         }
         return $rows;
     }
+
+    public function saveForLater($rawId)
+    {
+        $raw = $this->get($rawId);
+
+        $saved = $this->getSaved();
+
+        $cart = $this->getCart();
+
+        if ($saved->has($rawId)){
+            return false;
+        }
+
+        $this->remove($rawId);
+
+        $saved->put($rawId, $raw);
+        $this->storeSaved($saved);
+
+
+        return $raw;
+
+    }
+
+    public function getSaved()
+    {
+        $saved = $this->session->get($this->saved);
+
+        return $saved instanceof Collection ? $saved : new Collection();
+    }
+
+    public function backToCart($rawId)
+    {
+        
+        $raw = $this->getSaved()->get($rawId);
+
+        $cart = $this->getCart();
+        $cart->put($rawId, $raw);  
+        $this->save($cart); 
+
+        $this->removeSaved($rawId);
+                            
+        return $raw;
+    }
+
+    protected function storeSaved($saved)
+    {
+        $this->session->put($this->saved, $saved);
+        return $saved;
+    }
+
+    public function removeSaved($rawId)
+    {
+        if (!$row = $this->getSaved()->get($rawId))
+        {
+            return true;
+        }
+
+        $saved = $this->getSaved();
+
+        $saved->forget($rawId);
+
+        $this->storeSaved($saved);
+
+        return true;
+    }
+
+    public function cleanSaved()
+    {
+        $saved = $this->getSaved();
+
+
+        $this->storeSaved(null);
+
+
+        return true;
+    }
+
 
 
 
